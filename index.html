@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cómo Llegar — Terreno C.C.1-03-032-0883</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --blue: #4285f4;
+            --blue-dark: #1a73e8;
+            --green: #34a853;
+            --red: #ea4335;
+            --dark: #202124;
+            --dark2: #3c4043;
+            --gray: #5f6368;
+            --gray-light: #dadce0;
+            --gray-bg: #f1f3f4;
+            --bg: #f8f9fa;
+            --white: #fff;
+            --gold: #b8964e;
+            --gold-bg: #fef7e0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app { display: flex; height: 100vh; overflow: hidden; }
+
+        /* ─── MAP ─── */
+        .map-area { flex: 1; position: relative; min-width: 0; }
+        #map { width: 100%; height: 100%; }
+
+        .map-fab {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        .fab {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 11px 20px;
+            border: none;
+            border-radius: 24px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            transition: all 0.2s;
+        }
+        .fab svg { width: 17px; height: 17px; flex-shrink: 0; }
+        .fab-blue { background: var(--blue); color: #fff; }
+        .fab-blue:hover { background: var(--blue-dark); }
+        .fab-white { background: #fff; color: var(--dark); }
+        .fab-white:hover { background: var(--gray-bg); }
+        .fab:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ─── PANEL ─── */
+        .panel {
+            width: 420px;
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--white);
+            border-left: 1px solid var(--gray-light);
+            display: flex;
+            flex-direction: column;
+        }
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+        /* Route header */
+        .panel-header {
+            padding: 18px 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-light);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .panel-sub {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 2px;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            border-bottom: 1px solid var(--gray-light);
+        }
+        .stat-cell {
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            border-right: 1px solid var(--gray-light);
+        }
+        .stat-cell:last-child { border-right: none; }
+        .stat-val {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--blue-dark);
+        }
+        .stat-val.loading { font-size: 12px; font-weight: 400; color: #bbb; }
+        .stat-lbl {
+            font-size: 10px;
+            color: var(--gray);
+            margin-top: 1px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Endpoints */
+        .ep-box { padding: 14px 20px; border-bottom: 1px solid var(--gray-light); }
+        .ep-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 6px 0;
+        }
+        .ep-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            margin-top: 4px; flex-shrink: 0;
+        }
+        .ep-dot.o { background: var(--blue); box-shadow: 0 0 0 3px rgba(66,133,244,0.2); }
+        .ep-dot.d { background: var(--red); box-shadow: 0 0 0 3px rgba(234,67,53,0.2); }
+        .ep-line { width: 2px; height: 16px; background: var(--gray-light); margin: -3px 0 -3px 5px; }
+        .ep-name { font-size: 14px; font-weight: 600; color: var(--dark); }
+        .ep-addr { font-size: 12px; color: var(--gray); }
+
+        /* ─── SECTION ─── */
+        .section {
+            border-bottom: 1px solid var(--gray-light);
+        }
+        .section-head {
+            padding: 12px 20px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        /* ─── LOT INFO CARD ─── */
+        .lot-card {
+            padding: 0 20px 14px;
+        }
+        .lot-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .lot-item {
+            background: var(--gray-bg);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .lot-item.full { grid-column: 1 / -1; }
+        .lot-item-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .lot-item-val {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        .lot-item-val small {
+            font-weight: 400;
+            color: var(--gray);
+            font-size: 11px;
+        }
+
+        /* ─── NEARBY PLACES ─── */
+        .nearby-list { padding: 0 20px 14px; }
+        .nearby-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .nearby-item:last-child { border-bottom: none; }
+        .nearby-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+        .nearby-body { flex: 1; min-width: 0; }
+        .nearby-name { font-size: 13px; font-weight: 600; color: var(--dark); }
+        .nearby-desc { font-size: 11px; color: var(--gray); }
+        .nearby-dist {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .nearby-dist-val {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark2);
+        }
+        .nearby-dist-time {
+            font-size: 11px;
+            color: var(--gray);
+        }
+
+        /* ─── TERRAIN HIGHLIGHT ─── */
+        .terrain-bar {
+            padding: 12px 20px;
+            background: var(--gold-bg);
+            border-bottom: 1px solid #f0e2b8;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #5d4e37;
+            line-height: 1.4;
+        }
+        .terrain-bar strong { color: #3d3322; }
+        .terrain-bar-dot {
+            width: 20px; height: 20px;
+            background: var(--gold);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        /* ─── DIRECTIONS ─── */
+        .steps { flex: 1; }
+        .step {
+            display: flex;
+            gap: 12px;
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            transition: background 0.15s;
+        }
+        .step:hover { background: var(--bg); }
+        .step-ic {
+            flex-shrink: 0;
+            width: 26px; height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+        .step-ic svg { width: 20px; height: 20px; color: var(--dark2); }
+        .step-ic.arr svg { color: var(--green); }
+        .step-body { flex: 1; min-width: 0; }
+        .step-txt { font-size: 13px; line-height: 1.45; color: var(--dark); }
+        .step-meta {
+            display: flex; gap: 8px;
+            margin-top: 3px;
+            font-size: 11px; color: var(--gray);
+        }
+        .step-road {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            background: #e8f0fe;
+            color: var(--blue-dark);
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .error-msg {
+            padding: 12px 20px;
+            background: #fce8e6;
+            color: #c5221f;
+            font-size: 13px;
+            display: none;
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 800px) {
+            .app { flex-direction: column; }
+            .map-area { height: 50vh; flex: none; }
+            .panel {
+                width: 100%; height: 50vh;
+                border-left: none; border-top: 1px solid var(--gray-light);
+            }
+            .fab { padding: 9px 14px; font-size: 12px; }
+            .lot-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- MAP -->
+    <div class="map-area">
+        <div id="map"></div>
+        <div class="map-fab">
+            <button class="fab fab-white" id="btnDl" disabled onclick="downloadMap()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar Imagen
+            </button>
+            <a class="fab fab-blue" id="btnNav" href="#" target="_blank">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Iniciar Navegaci&oacute;n
+            </a>
+        </div>
+    </div>
+
+    <!-- PANEL -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">C&oacute;mo Llegar al Terreno</div>
+            <div class="panel-sub">Clave Catastral C.C.1-03-032-0883 &bull; BCS, M&eacute;xico</div>
+        </div>
+
+        <div id="error" class="error-msg"></div>
+
+        <div class="stats-row">
+            <div class="stat-cell">
+                <div class="stat-val" id="duration"><span class="loading">...</span></div>
+                <div class="stat-lbl">Tiempo</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-val" id="distance"><span class="loading">...</span></div>
+                <div class="stat-lbl">Distancia</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-val" style="font-size:15px;">En Auto</div>
+                <div class="stat-lbl">Modo</div>
+            </div>
+        </div>
+
+        <div class="ep-box">
+            <div class="ep-row">
+                <div class="ep-dot o"></div>
+                <div>
+                    <div class="ep-name">Hotel California</div>
+                    <div class="ep-addr">Todos Santos, BCS, M&eacute;xico</div>
+                </div>
+            </div>
+            <div class="ep-line"></div>
+            <div class="ep-row">
+                <div class="ep-dot d"></div>
+                <div>
+                    <div class="ep-name">Terreno C.C.1-03-032-0883</div>
+                    <div class="ep-addr">23.5575149, -110.2945742</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOT INFO -->
+        <div class="section">
+            <div class="section-head">Datos del Terreno</div>
+            <div class="lot-card">
+                <div class="lot-grid">
+                    <div class="lot-item full">
+                        <div class="lot-item-label">Clave Catastral</div>
+                        <div class="lot-item-val">C.C.1-03-032-0883</div>
+                    </div>
+                    <div class="lot-item">
+                        <div class="lot-item-label">Coordenadas</div>
+                        <div class="lot-item-val" style="font-size:12px;">23.5575149<br>-110.2945742</div>
+                    </div>
+                    <div class="lot-item">
+                        <div class="lot-item-label">Dimensiones Aprox.</div>
+                        <div class="lot-item-val">105 &times; 97 m <small>(~10,185 m&sup2;)</small></div>
+                    </div>
+                    <div class="lot-item">
+                        <div class="lot-item-label">Superficie</div>
+                        <div class="lot-item-val">~1.02 hect&aacute;reas</div>
+                    </div>
+                    <div class="lot-item">
+                        <div class="lot-item-label">Municipio</div>
+                        <div class="lot-item-val">La Paz, BCS</div>
+                    </div>
+                    <div class="lot-item full">
+                        <div class="lot-item-label">Ubicaci&oacute;n</div>
+                        <div class="lot-item-val" style="font-size:12px;">Entre Todos Santos y La Paz, sobre la Carretera Transpeninsular (Mex 1), Baja California Sur</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TERRAIN BAR -->
+        <div class="terrain-bar">
+            <div class="terrain-bar-dot"></div>
+            <div>El <strong>rect&aacute;ngulo dorado</strong> en el mapa marca los l&iacute;mites aproximados del predio. Haz clic en &eacute;l para ver detalles.</div>
+        </div>
+
+        <!-- NEARBY PLACES -->
+        <div class="section">
+            <div class="section-head">Distancias a Lugares Cercanos</div>
+            <div class="nearby-list" id="nearbyList">
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#e8f0fe;">&#9992;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">Aeropuerto SJD (Los Cabos)</div>
+                        <div class="nearby-desc">Aeropuerto Internacional</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-sjd">
+                        <div class="nearby-dist-val">~110 km</div>
+                        <div class="nearby-dist-time">~1h 30min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#fef7e0;">&#127958;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">Todos Santos</div>
+                        <div class="nearby-desc">Pueblo M&aacute;gico &bull; Galer&iacute;as, restaurantes, surf</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-ts">
+                        <div class="nearby-dist-val">~15 km</div>
+                        <div class="nearby-dist-time">~15 min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#e6f4ea;">&#127754;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">Playa Los Cerritos</div>
+                        <div class="nearby-desc">Surf &bull; Playa de arena, oleaje suave</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-cerritos">
+                        <div class="nearby-dist-val">~20 km</div>
+                        <div class="nearby-dist-time">~20 min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#fce8e6;">&#127961;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">La Paz</div>
+                        <div class="nearby-desc">Capital de BCS &bull; Malec&oacute;n, ferry, servicios</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-lapaz">
+                        <div class="nearby-dist-val">~60 km</div>
+                        <div class="nearby-dist-time">~50 min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#f3e8fd;">&#127965;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">Cabo San Lucas</div>
+                        <div class="nearby-desc">Tur&iacute;stico &bull; Marina, El Arco, vida nocturna</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-cabo">
+                        <div class="nearby-dist-val">~85 km</div>
+                        <div class="nearby-dist-time">~1h 10min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#e8f0fe;">&#127963;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">San Jos&eacute; del Cabo</div>
+                        <div class="nearby-desc">Centro hist&oacute;rico &bull; Galer&iacute;as, golf</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-sanjose">
+                        <div class="nearby-dist-val">~100 km</div>
+                        <div class="nearby-dist-time">~1h 20min</div>
+                    </div>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background:#fef7e0;">&#127966;</div>
+                    <div class="nearby-body">
+                        <div class="nearby-name">El Pescadero</div>
+                        <div class="nearby-desc">Comunidad agr&iacute;cola &bull; Granjas org&aacute;nicas, surf</div>
+                    </div>
+                    <div class="nearby-dist" id="dist-pescadero">
+                        <div class="nearby-dist-val">~8 km</div>
+                        <div class="nearby-dist-time">~10 min</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DIRECTIONS -->
+        <div class="section">
+            <div class="section-head">Indicaciones paso a paso</div>
+            <div class="steps" id="dirList">
+                <div class="step">
+                    <div class="step-body" style="text-align:center;color:#bbb;padding:20px 0;">
+                        Calculando ruta...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var API_KEY = 'AIzaSyBgAXx3AZcrcu-yZUKpDtlBRvZFad7-qUU';
+    var ORIGIN = { lat: 23.4484, lng: -110.2233 };
+    var DEST   = { lat: 23.5575149, lng: -110.2945742 };
+
+    var LOT = [
+        { lat: 23.55795, lng: -110.29510 },
+        { lat: 23.55795, lng: -110.29405 },
+        { lat: 23.55708, lng: -110.29405 },
+        { lat: 23.55708, lng: -110.29510 }
+    ];
+
+    // Key nearby places for distance calculation
+    var NEARBY = [
+        { id: 'dist-sjd',       loc: { lat: 23.1518, lng: -109.7215 }, name: 'Aeropuerto SJD' },
+        { id: 'dist-ts',        loc: { lat: 23.4484, lng: -110.2233 }, name: 'Todos Santos' },
+        { id: 'dist-cerritos',  loc: { lat: 23.3185, lng: -110.1733 }, name: 'Playa Los Cerritos' },
+        { id: 'dist-lapaz',     loc: { lat: 24.1426, lng: -110.3128 }, name: 'La Paz' },
+        { id: 'dist-cabo',      loc: { lat: 22.8905, lng: -109.9167 }, name: 'Cabo San Lucas' },
+        { id: 'dist-sanjose',   loc: { lat: 23.0598, lng: -109.7006 }, name: 'San José del Cabo' },
+        { id: 'dist-pescadero', loc: { lat: 23.3596, lng: -110.1519 }, name: 'El Pescadero' }
+    ];
+
+    var staticMapUrl = '';
+
+    document.getElementById('btnNav').href =
+        'https://www.google.com/maps/dir/?api=1'
+        + '&origin=' + ORIGIN.lat + ',' + ORIGIN.lng
+        + '&destination=' + DEST.lat + ',' + DEST.lng
+        + '&travelmode=driving';
+
+    function showError(m) {
+        var e = document.getElementById('error');
+        e.textContent = m;
+        e.style.display = 'block';
+    }
+
+    function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: { lat: (ORIGIN.lat + DEST.lat) / 2, lng: (ORIGIN.lng + DEST.lng) / 2 },
+            mapTypeId: 'hybrid',
+            mapTypeControl: true,
+            mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_LEFT },
+            fullscreenControl: true,
+            streetViewControl: true,
+            zoomControl: true,
+            gestureHandling: 'greedy'
+        });
+
+        // Lot polygon
+        var lotPoly = new google.maps.Polygon({
+            paths: LOT,
+            strokeColor: '#FFD700',
+            strokeOpacity: 1,
+            strokeWeight: 3,
+            fillColor: '#FFD700',
+            fillOpacity: 0.30,
+            map: map,
+            zIndex: 10
+        });
+
+        // Lot label
+        var lotLabel = new google.maps.Marker({
+            position: { lat: 23.55751, lng: -110.29457 },
+            map: map,
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 0
+            },
+            label: {
+                text: 'TERRENO\nC.C.1-03-032-0883',
+                color: '#FFD700',
+                fontWeight: '700',
+                fontSize: '11px'
+            },
+            zIndex: 11
+        });
+
+        var lotInfo = new google.maps.InfoWindow({
+            content: '<div style="font-family:Inter,sans-serif;padding:6px;min-width:220px;">'
+                + '<div style="font-size:15px;font-weight:700;color:#202124;margin-bottom:6px;">Terreno C.C.1-03-032-0883</div>'
+                + '<table style="font-size:12px;color:#555;border-collapse:collapse;width:100%;">'
+                + '<tr><td style="padding:3px 8px 3px 0;font-weight:600;color:#333;">Clave Catastral</td><td>C.C.1-03-032-0883</td></tr>'
+                + '<tr><td style="padding:3px 8px 3px 0;font-weight:600;color:#333;">Coordenadas</td><td>23.5575, -110.2946</td></tr>'
+                + '<tr><td style="padding:3px 8px 3px 0;font-weight:600;color:#333;">Superficie</td><td>~10,185 m\u00b2 (1.02 ha)</td></tr>'
+                + '<tr><td style="padding:3px 8px 3px 0;font-weight:600;color:#333;">Dimensiones</td><td>~105 x 97 m</td></tr>'
+                + '<tr><td style="padding:3px 8px 3px 0;font-weight:600;color:#333;">Municipio</td><td>La Paz, BCS</td></tr>'
+                + '</table></div>'
+        });
+        lotPoly.addListener('click', function(e) {
+            lotInfo.setPosition(e.latLng);
+            lotInfo.open(map);
+        });
+        lotLabel.addListener('click', function() {
+            lotInfo.setPosition(lotLabel.getPosition());
+            lotInfo.open(map);
+        });
+
+        // Route
+        var dirService = new google.maps.DirectionsService();
+        var dirRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: false,
+            polylineOptions: { strokeColor: '#4285f4', strokeOpacity: 0.9, strokeWeight: 6 }
+        });
+
+        dirService.route({
+            origin: new google.maps.LatLng(ORIGIN.lat, ORIGIN.lng),
+            destination: new google.maps.LatLng(DEST.lat, DEST.lng),
+            travelMode: google.maps.TravelMode.DRIVING
+        }, function(res, st) {
+            if (st !== 'OK') { showError('No se pudo calcular la ruta: ' + st); return; }
+
+            dirRenderer.setDirections(res);
+            var route = res.routes[0], leg = route.legs[0];
+
+            document.getElementById('distance').textContent = leg.distance.text;
+            document.getElementById('duration').textContent = leg.duration.text;
+
+            // Static map for download
+            var pe = route.overview_polyline;
+            staticMapUrl = 'https://maps.googleapis.com/maps/api/staticmap?'
+                + 'size=1280x960&scale=2&maptype=hybrid'
+                + '&markers=color:blue%7Clabel:A%7C' + ORIGIN.lat + ',' + ORIGIN.lng
+                + '&markers=color:red%7Clabel:B%7C' + DEST.lat + ',' + DEST.lng
+                + '&path=' + encodeURIComponent('color:0x4285f4ff|weight:5|enc:' + pe)
+                + '&key=' + API_KEY;
+
+            var t = new Image();
+            t.onload = function() { document.getElementById('btnDl').disabled = false; };
+            t.src = staticMapUrl;
+
+            renderSteps(leg.steps);
+        });
+
+        // Calculate real distances to nearby places
+        calcNearby(dirService);
+    }
+
+    function calcNearby(dirService) {
+        NEARBY.forEach(function(p) {
+            dirService.route({
+                origin: new google.maps.LatLng(DEST.lat, DEST.lng),
+                destination: new google.maps.LatLng(p.loc.lat, p.loc.lng),
+                travelMode: google.maps.TravelMode.DRIVING
+            }, function(res, st) {
+                if (st !== 'OK') return;
+                var l = res.routes[0].legs[0];
+                var el = document.getElementById(p.id);
+                if (el) {
+                    el.innerHTML = '<div class="nearby-dist-val">' + l.distance.text + '</div>'
+                        + '<div class="nearby-dist-time">' + l.duration.text + '</div>';
+                }
+            });
+        });
+    }
+
+    function ico(m) {
+        if (!m) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>';
+        if (m.includes('left'))
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 10 9 10 9 16"/><path d="M20 20V13a2 2 0 00-2-2H9"/></svg>';
+        if (m.includes('right'))
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 15 10 15 16"/><path d="M4 20V13a2 2 0 012-2h9"/></svg>';
+        if (m.includes('straight') || m.includes('merge') || m.includes('continue'))
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="8 9 12 5 16 9"/></svg>';
+        if (m.includes('roundabout'))
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 16v5"/></svg>';
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>';
+    }
+
+    function roadTag(inst) {
+        var l = inst.toLowerCase();
+        if (l.includes('transpeninsular') || l.includes('mex 1') || l.includes('méxico 1')) return 'Mex 1 — Transpeninsular';
+        if (l.includes('mex 19') || l.includes('méxico 19')) return 'Mex 19 — Pac\u00edfico';
+        if (l.includes('todos santos')) return 'Todos Santos';
+        if (l.includes('la paz')) return 'Rumbo a La Paz';
+        if (l.includes('pescadero')) return 'El Pescadero';
+        return null;
+    }
+
+    function renderSteps(steps) {
+        var c = document.getElementById('dirList'), h = '';
+        steps.forEach(function(s) {
+            var d = s.distance ? s.distance.text : '';
+            var t = s.duration ? s.duration.text : '';
+            var r = roadTag(s.instructions);
+            h += '<div class="step"><div class="step-ic">' + ico(s.maneuver||'') + '</div>'
+                + '<div class="step-body"><div class="step-txt">' + s.instructions + '</div>'
+                + '<div class="step-meta">' + (d?'<span>'+d+'</span>':'') + (t?'<span>'+t+'</span>':'') + '</div>'
+                + (r?'<div class="step-road">'+r+'</div>':'')
+                + '</div></div>';
+        });
+        h += '<div class="step" style="background:#e6f4ea;">'
+            + '<div class="step-ic arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
+            + '<div class="step-body"><div class="step-txt"><strong>Llegaste a tu destino</strong></div>'
+            + '<div class="step-meta"><span>Terreno C.C.1-03-032-0883</span></div></div></div>';
+        c.innerHTML = h;
+    }
+
+    function downloadMap() {
+        if (!staticMapUrl) return;
+        var b = document.getElementById('btnDl'), o = b.innerHTML;
+        b.innerHTML = 'Generando...'; b.disabled = true;
+        var cv = document.createElement('canvas'), cx = cv.getContext('2d');
+        var im = new Image(); im.crossOrigin = 'anonymous';
+        im.onload = function() {
+            cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+            cx.drawImage(im, 0, 0);
+            cv.toBlob(function(bl) {
+                var u = URL.createObjectURL(bl), a = document.createElement('a');
+                a.href = u; a.download = 'Ruta_Terreno_CC1-03-032-0883.png';
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); URL.revokeObjectURL(u);
+                b.innerHTML = o; b.disabled = false;
+            }, 'image/png');
+        };
+        im.onerror = function() { window.open(staticMapUrl,'_blank'); b.innerHTML=o; b.disabled=false; };
+        im.src = staticMapUrl;
+    }
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgAXx3AZcrcu-yZUKpDtlBRvZFad7-qUU&callback=initMap"></script>
+</body>
+</html>
